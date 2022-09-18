@@ -4,24 +4,20 @@ import {db} from './firebase-config';
 import {
     collection,
     getDocs,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    doc,
 } from "firebase/firestore";
 import CurrencyRow from "./currencyRow";
 
 function App() {
-    const [currencyOptions, setcurrencyOptions] = useState([]);
-    const [fromCurrency, setfromCurrency] = useState();
-    const [toCurrency, setToCurrency] = useState();
+    const usersCollectionRef = collection(db, "users");
+    const [select1, setSelect1] = useState([])
+    const [select2, setSelect2] = useState([])
+    const [currencyOptions, setCurrencyOptions] = useState([]);
+    const [fromCurrency, setFromCurrency] = useState('');
+    const [toCurrency, setToCurrency] = useState('');
     const [amount, setAmount] = useState(1);
-    const [exchangeRate, setExchangeRate] = useState();
+    const [exchangeRate, setExchangeRate] = useState(1);
     const [amountInFromCurrency, setAmountInFromCurrency] = useState(true);
 
-    const usersCollectionRef = collection(db, "users");
-    const [users, setUsers] = useState([]);
-    let b = ["a", "b"];
 
     let toAmount, fromAmount;
     if (amountInFromCurrency) {
@@ -31,45 +27,73 @@ function App() {
         toAmount = amount;
         fromAmount = amount / exchangeRate;
     }
-    useEffect(() => {
 
-        const getUsers = async () => {
-            const data = await getDocs(usersCollectionRef);
-            console.log(data.docs, '1111111111')
-            setUsers(data.docs.map((doc) => ({...doc.data(), id: doc.id})));
-        };
+    const getUsers = async () => {
+        const data = await getDocs(usersCollectionRef);
+        const value = data.docs.map((doc) => ({ ...doc.data(), id: doc.id }))
+
+
+        const valueSelect = Object.values(value).map((i) => {
+            return { base_code: i.base_code, map: Object.keys(i.rates), rates: i.rates }
+        })
+
+
+        const sel = valueSelect.map((a) => a.base_code)
+
+
+        setFromCurrency(sel[0]);
+        setSelect1(sel)
+        setCurrencyOptions(valueSelect)
+    };
+
+    useEffect(() => {
         getUsers();
-        setfromCurrency(1);
-        setToCurrency(1);
-        setExchangeRate(1);
     }, []);
-    console.log(users)
-    useEffect(() => {
 
-    }, [fromCurrency, toCurrency]);
+
+    useEffect(() => {
+        const rate = currencyOptions.find((s) => s.base_code === fromCurrency)?.rates[toCurrency]
+        if (rate) {
+            setExchangeRate(+rate)
+        }
+    }, [toCurrency, fromCurrency])
+
+
+    useEffect(() => {
+        const a = currencyOptions.find((s) => s.base_code === fromCurrency)
+        if (a) {
+            setSelect2(a?.map)
+            setToCurrency(a.map[0]);
+        }
+    }, [fromCurrency, currencyOptions])
+
+
     function handleFromAmount(e) {
         setAmount(e.target.value);
         setAmountInFromCurrency(true);
     }
+
     function handleToAmount(e) {
         setAmount(e.target.value);
         setAmountInFromCurrency(false);
     }
+
+
     return (
         <div className="App">
             <h1>Currency Converter</h1>
             <CurrencyRow
-                currencyOptions={b}
+                currencyOptions={select1}
                 selectedCurrency={fromCurrency}
                 onchangeCurrency={(e) => {
-                    setfromCurrency(e.target.value);
+                    setFromCurrency(e.target.value);
                 }}
                 amount={fromAmount}
                 onchangeAmount={handleFromAmount}
             />
             <h1> = </h1>
             <CurrencyRow
-                currencyOptions={b}
+                currencyOptions={select2}
                 selectedCurrency={toCurrency}
                 onchangeCurrency={(e) => {
                     setToCurrency(e.target.value);
@@ -80,4 +104,5 @@ function App() {
         </div>
     );
 }
+
 export default App;
